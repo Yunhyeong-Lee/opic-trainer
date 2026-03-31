@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff">
+<title>OPIc Voice Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --purple: #7F77DD;
+  --purple-light: #EEEDFE;
+  --purple-dark: #3C3489;
+  --green: #1D9E75;
+  --green-light: #E1F5EE;
+  --green-dark: #085041;
+  --amber-light: #FAEEDA;
+  --amber-border: #BA7517;
+  --amber-text: #633806;
+  --lime-light: #EAF3DE;
+  --lime-border: #639922;
+  --lime-text: #27500A;
+  --blue-light: #E6F1FB;
+  --blue-border: #378ADD;
+  --blue-text: #042C53;
+  --red: #E24B4A;
+  --red-light: #FCEBEB;
+  --gray-50: #F8F8F7;
+  --gray-100: #F1EFE8;
+  --gray-200: #D3D1C7;
+  --gray-400: #888780;
+  --gray-600: #5F5E5A;
+  --gray-900: #2C2C2A;
+  --border: rgba(44,44,42,0.12);
+  --border-mid: rgba(44,44,42,0.22);
+  --font: 'DM Sans', system-ui, sans-serif;
+  --mono: 'DM Mono', monospace;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --purple-light: #26215C;
+    --purple-dark: #CECBF6;
+    --green-light: #04342C;
+    --green-dark: #9FE1CB;
+    --amber-light: #412402; --amber-text: #FAC775;
+    --lime-light: #173404; --lime-text: #C0DD97;
+    --blue-light: #042C53; --blue-text: #B5D4F4;
+    --red-light: #501313;
+    --gray-50: #1a1a18; --gray-100: #222220;
+    --gray-200: #3a3a38; --gray-400: #888780;
+    --gray-600: #b4b2a9; --gray-900: #F1EFE8;
+    --border: rgba(241,239,232,0.1); --border-mid: rgba(241,239,232,0.18);
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; background: var(--gray-50); font-family: var(--font); color: var(--gray-900); }
+
+/* ── SHELL ── */
+#shell {
+  display: flex; flex-direction: column;
+  height: 100vh; height: 100dvh;
+  padding-top: var(--safe-top);
+}
+
+/* ── HEADER ── */
+#header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px 10px;
+  background: var(--gray-50);
+  border-bottom: 0.5px solid var(--border);
+  flex-shrink: 0;
+}
+#header-title { font-size: 15px; font-weight: 500; flex: 1; }
+#level-badge {
+  padding: 3px 11px; border-radius: 20px;
+  font-size: 12px; font-weight: 500;
+  background: var(--gray-200); color: var(--gray-600);
+  transition: background 0.3s, color 0.3s;
+}
+.hdr-btn {
+  height: 32px; padding: 0 10px; border-radius: 16px;
+  border: 0.5px solid var(--border-mid);
+  background: transparent; font-size: 12px; font-weight: 500;
+  color: var(--gray-600); font-family: var(--font);
+  cursor: pointer; white-space: nowrap; transition: all 0.15s;
+}
+.hdr-btn.on { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
+#lang-wrap { display: flex; border: 0.5px solid var(--border-mid); border-radius: 16px; overflow: hidden; }
+.lang-opt { padding: 6px 11px; font-size: 12px; font-weight: 500; cursor: pointer; background: transparent; border: none; color: var(--gray-400); font-family: var(--font); transition: all 0.15s; }
+.lang-opt.active { background: var(--purple-light); color: var(--purple-dark); }
+
+/* ── MESSAGES ── */
+#messages {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 14px 14px 8px;
+  display: flex; flex-direction: column; gap: 12px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.msg { display: flex; gap: 8px; max-width: 94%; animation: fadeUp 0.2s ease; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.msg.user { flex-direction: row-reverse; align-self: flex-end; }
+.msg.assistant { align-self: flex-start; }
+.avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 500; flex-shrink: 0; margin-top: 2px;
+}
+.msg.user .avatar { background: var(--purple-light); color: var(--purple-dark); }
+.msg.assistant .avatar { background: var(--green-light); color: var(--green-dark); }
+.bubble { padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.65; word-break: break-word; }
+.msg.user .bubble { background: var(--purple-light); color: var(--purple-dark); border-bottom-right-radius: 5px; }
+.msg.assistant .bubble { background: var(--gray-100); border: 0.5px solid var(--border); color: var(--gray-900); border-bottom-left-radius: 5px; }
+.eval-card { margin-top: 8px; padding: 10px 12px; background: var(--gray-50); border: 0.5px solid var(--border); border-radius: 10px; font-size: 12px; }
+.eval-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 0.5px solid var(--border); color: var(--gray-400); }
+.eval-row:last-child { border-bottom: none; }
+.eval-row strong { color: var(--gray-900); }
+.tag-card { margin-top: 6px; padding: 7px 10px; border-radius: 8px; font-size: 12px; line-height: 1.5; }
+.tag-label { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px; }
+.weakness { background: var(--amber-light); border-left: 3px solid var(--amber-border); color: var(--amber-text); }
+.correction { background: var(--lime-light); border-left: 3px solid var(--lime-border); color: var(--lime-text); }
+.correction .tag-label { color: var(--lime-text); }
+.template-box { background: var(--blue-light); border-left: 3px solid var(--blue-border); color: var(--blue-text); font-family: var(--mono); }
+.levelup { margin-top: 6px; padding: 8px 12px; background: var(--lime-light); border: 0.5px solid var(--lime-border); border-radius: 8px; color: var(--lime-text); font-size: 12px; font-weight: 500; text-align: center; }
+.loading-dots { display: inline-flex; gap: 5px; align-items: center; padding: 10px 14px; }
+.loading-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--gray-400); animation: dot 1.2s infinite; }
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dot { 0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1)} }
+
+/* ── VOICE STATUS ── */
+#voice-status {
+  text-align: center; font-size: 12px; color: var(--gray-400);
+  min-height: 18px; padding: 2px 16px; flex-shrink: 0;
+  transition: color 0.2s;
+}
+#voice-status.active { color: var(--red); }
+#voice-status.speaking { color: var(--green); }
+
+/* ── INPUT AREA ── */
+#input-wrap {
+  flex-shrink: 0;
+  background: var(--gray-50);
+  border-top: 0.5px solid var(--border);
+  padding: 10px 14px;
+  padding-bottom: calc(10px + var(--safe-bottom));
+}
+#input-row { display: flex; gap: 8px; align-items: flex-end; }
+#user-input {
+  flex: 1; resize: none; min-height: 44px; max-height: 110px;
+  padding: 11px 14px; border-radius: 22px;
+  border: 0.5px solid var(--border-mid);
+  background: var(--gray-100); color: var(--gray-900);
+  font-size: 15px; line-height: 1.45; font-family: var(--font);
+  outline: none; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  transition: border-color 0.15s;
+}
+#user-input:focus { border-color: var(--purple); }
+#user-input:disabled { opacity: 0.45; }
+#mic-btn, #send-btn {
+  width: 48px; height: 48px; border-radius: 50%;
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all 0.18s;
+  -webkit-tap-highlight-color: transparent;
+}
+#mic-btn {
+  background: var(--gray-100);
+  border: 0.5px solid var(--border-mid);
+}
+#mic-btn svg { width: 18px; height: 18px; fill: var(--gray-600); transition: fill 0.18s; }
+#mic-btn.recording { background: var(--red-light); border-color: var(--red); animation: micPulse 1s infinite; }
+#mic-btn.recording svg { fill: var(--red); }
+@keyframes micPulse { 0%,100%{box-shadow:0 0 0 0 rgba(226,75,74,.25)}50%{box-shadow:0 0 0 8px rgba(226,75,74,0)} }
+#send-btn { background: var(--purple); }
+#send-btn:active { transform: scale(0.94); background: var(--purple-dark); }
+#send-btn:disabled { background: var(--gray-200); }
+#send-btn svg { width: 17px; height: 17px; fill: white; }
+
+/* ── BOTTOM NAV ── */
+#bottom-nav {
+  display: flex; border-top: 0.5px solid var(--border);
+  background: var(--gray-50); flex-shrink: 0;
+  padding-bottom: var(--safe-bottom);
+}
+.nav-tab {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 8px 4px; gap: 3px; cursor: pointer;
+  border: none; background: transparent; font-family: var(--font);
+  transition: all 0.15s; color: var(--gray-400);
+  -webkit-tap-highlight-color: transparent;
+  min-height: 52px;
+}
+.nav-tab.active { color: var(--purple); }
+.nav-icon { font-size: 18px; line-height: 1; }
+.nav-label { font-size: 10px; font-weight: 500; }
+
+/* ── PANELS ── */
+#panel-scores, #panel-history {
+  display: none; flex-direction: column;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 16px; gap: 14px;
+  flex: 1;
+}
+#panel-scores.visible, #panel-history.visible { display: flex; }
+
+/* scores panel */
+.radar-wrap { display: flex; justify-content: center; }
+.score-bars { display: flex; flex-direction: column; gap: 8px; }
+.score-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--gray-600); }
+.score-row span:first-child { width: 76px; }
+.bar-track { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; background: var(--purple); transition: width 0.6s ease; }
+.score-val { width: 28px; text-align: right; font-weight: 500; color: var(--gray-900); font-size: 13px; }
+
+/* history panel */
+.hist-item {
+  display: flex; align-items: center;
+  padding: 10px 12px; border-radius: 10px;
+  background: var(--gray-100); border: 0.5px solid var(--border);
+}
+.hist-q { font-size: 13px; font-weight: 500; }
+.hist-avg { margin-left: auto; font-size: 13px; font-weight: 500; color: var(--purple); }
+.hist-scores { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+
+/* ── START SCREEN ── */
+#start-screen {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 14px; padding: 32px 24px; text-align: center;
+}
+#start-screen h2 { font-size: 22px; font-weight: 500; color: var(--gray-900); }
+#start-screen p { font-size: 14px; color: var(--gray-600); line-height: 1.6; }
+.start-btn {
+  margin-top: 8px; padding: 14px 32px;
+  background: var(--purple); color: white;
+  border: none; border-radius: 24px;
+  font-size: 15px; font-weight: 500;
+  cursor: pointer; font-family: var(--font);
+  transition: all 0.18s;
+  min-height: 52px;
+}
+.start-btn:active { transform: scale(0.97); background: var(--purple-dark); }
+.notice { font-size: 12px; color: var(--gray-400); }
+
+/* ── CONTENT AREA ── */
+#content-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+</style>
+</head>
+<body>
+
+<div id="shell">
+  <!-- HEADER -->
+  <div id="header">
+    <span style="font-size:18px">🎙</span>
+    <span id="header-title">OPIc Trainer</span>
+    <div id="level-badge">—</div>
+    <div id="lang-wrap">
+      <button class="lang-opt active" id="lang-en" onclick="setLang('en')">EN</button>
+      <button class="lang-opt" id="lang-ko" onclick="setLang('ko')">한</button>
+    </div>
+    <button id="tts-btn" class="hdr-btn on" onclick="toggleTTS()">🔊</button>
+  </div>
+
+  <!-- CONTENT AREA (chat / scores / history) -->
+  <div id="content-area">
+
+    <!-- CHAT VIEW -->
+    <div id="view-chat" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+      <div id="messages">
+        <div id="start-screen">
+          <div style="font-size:48px">🎓</div>
+          <h2>OPIc Voice Trainer</h2>
+          <p>AI 질문을 듣고 마이크로 답하거나<br>텍스트로 입력하세요.<br>실시간 점수와 교정 피드백을 받아요.</p>
+          <button class="start-btn" onclick="startSession()">진단 세션 시작하기</button>
+          <p class="notice">마이크 권한 허용 필요 · Chrome 권장</p>
+        </div>
+      </div>
+      <div id="voice-status"></div>
+      <div id="input-wrap">
+        <div id="input-row">
+          <textarea id="user-input" placeholder="말하거나 입력하세요..." rows="1" disabled
+            oninput="autoResize(this)"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"></textarea>
+          <button id="mic-btn" onclick="toggleMic()" disabled>
+            <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zm-1 3a1 1 0 0 1 2 0v8a1 1 0 0 1-2 0V4zM7 11a1 1 0 0 1 1 1 4 4 0 0 0 8 0 1 1 0 1 1 2 0 6 6 0 0 1-5 5.91V20h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-3.09A6 6 0 0 1 6 12a1 1 0 0 1 1-1z"/></svg>
+          </button>
+          <button id="send-btn" onclick="sendMessage()" disabled>
+            <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCORES VIEW -->
+    <div id="panel-scores">
+      <div class="radar-wrap">
+        <canvas id="radarChart" width="240" height="190"></canvas>
+      </div>
+      <div class="score-bars">
+        <div class="score-row"><span>Fluency</span><div class="bar-track"><div class="bar-fill" id="b-fluency" style="width:0%"></div></div><span class="score-val" id="v-fluency">—</span></div>
+        <div class="score-row"><span>Length</span><div class="bar-track"><div class="bar-fill" id="b-length" style="width:0%"></div></div><span class="score-val" id="v-length">—</span></div>
+        <div class="score-row"><span>Coherence</span><div class="bar-track"><div class="bar-fill" id="b-coherence" style="width:0%"></div></div><span class="score-val" id="v-coherence">—</span></div>
+        <div class="score-row"><span>Grammar</span><div class="bar-track"><div class="bar-fill" id="b-grammar" style="width:0%"></div></div><span class="score-val" id="v-grammar">—</span></div>
+      </div>
+      <div id="score-summary" style="font-size:13px;color:var(--gray-600);text-align:center;padding:8px 0">
+        아직 평가된 답변이 없어요
+      </div>
+    </div>
+
+    <!-- HISTORY VIEW -->
+    <div id="panel-history">
+      <div id="history-list">
+        <p style="font-size:13px;color:var(--gray-400);text-align:center;padding:24px 0">아직 기록이 없어요</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav id="bottom-nav">
+    <button class="nav-tab active" id="tab-chat" onclick="switchTab('chat')">
+      <span class="nav-icon">💬</span>
+      <span class="nav-label">채팅</span>
+    </button>
+    <button class="nav-tab" id="tab-scores" onclick="switchTab('scores')">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">점수</span>
+    </button>
+    <button class="nav-tab" id="tab-history" onclick="switchTab('history')">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">기록</span>
+    </button>
+  </nav>
+</div>
+
+<script>
+const SYSTEM_PROMPT = `You are an OPIc speaking tutor for Korean learners (TOEIC ~700), targeting IM to IH level.
+
+Run INITIAL DIAGNOSTIC: ask 3 questions one at a time (1. daily life, 2. past experience, 3. why question).
+
+After EACH user response, output evaluation in this EXACT format:
+
+[EVAL]
+Level: IM1
+Fluency: 3
+Length: 2
+Coherence: 3
+Grammar: 2
+Weakness: Short answers
+Corrected: [natural corrected version]
+Template: [reusable sentence structure]
+[/EVAL]
+
+Then continue naturally. After Q3 add:
+[DIAGNOSTIC]
+Estimated Level: IM2
+Recommendation: Stay in IM training
+[/DIAGNOSTIC]
+
+Every 5 questions add a [PROGRESS] summary. Be analytical, no vague praise, one actionable tip per turn.`;
+
+let history = [], scores = {fluency:[],length:[],coherence:[],grammar:[]};
+let qCount = 0, radarChart = null, isLoading = false;
+let ttsEnabled = true, sttLang = 'en-US';
+let recognition = null, isRecording = false;
+let currentTab = 'chat';
+
+/* ── TAB SWITCHING ── */
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('view-chat').style.display = tab === 'chat' ? 'flex' : 'none';
+  document.getElementById('panel-scores').className = tab === 'scores' ? 'visible' : '';
+  document.getElementById('panel-history').className = tab === 'history' ? 'visible' : '';
+  if (tab === 'scores' && !radarChart) initRadar();
+}
+
+/* ── LANG / TTS ── */
+function setLang(lang) {
+  sttLang = lang === 'en' ? 'en-US' : 'ko-KR';
+  document.getElementById('lang-en').className = 'lang-opt' + (lang==='en'?' active':'');
+  document.getElementById('lang-ko').className = 'lang-opt' + (lang==='ko'?' active':'');
+  document.getElementById('user-input').placeholder = lang === 'en' ? 'Speak or type in English...' : '한국어 또는 영어로 말하거나 입력...';
+  if (recognition) recognition.lang = sttLang;
+  setStatus('STT: ' + (lang==='en'?'English':'한국어') + ' 모드', '');
+  setTimeout(() => setStatus('',''), 1800);
+}
+function toggleTTS() {
+  ttsEnabled = !ttsEnabled;
+  const btn = document.getElementById('tts-btn');
+  btn.className = 'hdr-btn' + (ttsEnabled ? ' on' : '');
+  btn.textContent = ttsEnabled ? '🔊' : '🔇';
+  if (!ttsEnabled && window.speechSynthesis) window.speechSynthesis.cancel();
+}
+function speakText(text) {
+  if (!ttsEnabled || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const clean = text.replace(/\[EVAL\][\s\S]*?\[\/EVAL\]/g,'').replace(/\[DIAGNOSTIC\][\s\S]*?\[\/DIAGNOSTIC\]/g,'').replace(/\[PROGRESS\][\s\S]*?\[\/PROGRESS\]/g,'').replace(/\*\*/g,'').trim();
+  if (!clean) return;
+  const utt = new SpeechSynthesisUtterance(clean);
+  utt.lang = 'en-US'; utt.rate = 0.95;
+  const voices = window.speechSynthesis.getVoices();
+  const pref = voices.find(v => v.lang==='en-US' && (v.name.includes('Samantha')||v.name.includes('Google US')||v.name.includes('Alex')));
+  if (pref) utt.voice = pref;
+  utt.onstart = () => setStatus('AI speaking...', 'speaking');
+  utt.onend = () => setStatus('','');
+  utt.onerror = () => setStatus('','');
+  window.speechSynthesis.speak(utt);
+}
+
+/* ── STT ── */
+function initSTT() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { setStatus('이 브라우저는 음성 인식을 지원하지 않아요 (Chrome 사용 권장)', 'active'); return; }
+  recognition = new SR();
+  recognition.continuous = false; recognition.interimResults = true;
+  recognition.onstart = () => { isRecording=true; setStatus('🎤 듣고 있어요... 말해보세요','active'); document.getElementById('mic-btn').classList.add('recording'); };
+  recognition.onresult = (e) => {
+    let interim='', final='';
+    for(let i=e.resultIndex;i<e.results.length;i++) { if(e.results[i].isFinal) final+=e.results[i][0].transcript; else interim+=e.results[i][0].transcript; }
+    const inp=document.getElementById('user-input'); inp.value=final||interim; autoResize(inp);
+  };
+  recognition.onend = () => {
+    isRecording=false; document.getElementById('mic-btn').classList.remove('recording'); setStatus('','');
+    const val=document.getElementById('user-input').value.trim();
+    if(val) setTimeout(()=>sendMessage(),350);
+  };
+  recognition.onerror = (e) => {
+    isRecording=false; document.getElementById('mic-btn').classList.remove('recording');
+    const msg = e.error==='not-allowed'?'마이크 권한이 거부됐어요':'음성 인식 오류가 발생했어요';
+    setStatus(msg,'active'); setTimeout(()=>setStatus('',''),2800);
+  };
+}
+function toggleMic() {
+  if (!recognition) { setStatus('Chrome 또는 Edge를 사용해주세요','active'); return; }
+  if (isRecording) { recognition.stop(); return; }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  recognition.lang = sttLang;
+  try { recognition.start(); } catch(e) { setStatus('마이크를 시작할 수 없어요','active'); }
+}
+
+/* ── RADAR ── */
+function initRadar() {
+  const ctx = document.getElementById('radarChart').getContext('2d');
+  radarChart = new Chart(ctx, {
+    type: 'radar',
+    data: { labels:['Fluency','Length','Coherence','Grammar'], datasets:[{ data:[0,0,0,0], backgroundColor:'rgba(127,119,221,0.18)', borderColor:'#7F77DD', borderWidth:2, pointBackgroundColor:'#7F77DD', pointRadius:4 }] },
+    options: { responsive:false, plugins:{legend:{display:false}}, scales:{ r:{ min:0, max:5, ticks:{stepSize:1,font:{size:10},color:'#888780',backdropColor:'transparent'}, pointLabels:{font:{size:11},color:'#5F5E5A'}, grid:{color:'rgba(136,135,128,0.18)'}, angleLines:{color:'rgba(136,135,128,0.18)'} } } }
+  });
+}
+
+/* ── SCORES ── */
+function updateScores(f,l,c,g) {
+  scores.fluency.push(f); scores.length.push(l); scores.coherence.push(c); scores.grammar.push(g);
+  const avg = arr => arr.reduce((a,b)=>a+b,0)/arr.length;
+  const af=avg(scores.fluency),al=avg(scores.length),ac=avg(scores.coherence),ag=avg(scores.grammar);
+  if (radarChart) { radarChart.data.datasets[0].data=[af,al,ac,ag]; radarChart.update(); }
+  const upd=(id,val)=>{document.getElementById('b-'+id).style.width=(val/5*100).toFixed(0)+'%';document.getElementById('v-'+id).textContent=val.toFixed(1);};
+  upd('fluency',af);upd('length',al);upd('coherence',ac);upd('grammar',ag);
+  const total=((af+al+ac+ag)/4).toFixed(2);
+  document.getElementById('score-summary').textContent = `총 ${qCount}문제 · 평균 ${total}/5`;
+}
+
+/* ── LEVEL ── */
+function updateLevel(lvl) {
+  const el=document.getElementById('level-badge'); el.textContent=lvl;
+  const c={IM1:['#D3D1C7','#444441'],IM2:['#CECBF6','#3C3489'],IM3:['#B5D4F4','#0C447C'],IH:['#9FE1CB','#085041']};
+  const [bg,col]=c[lvl]||['#D3D1C7','#444441']; el.style.background=bg; el.style.color=col;
+}
+
+/* ── HISTORY ── */
+function addToHistory(qNum,s) {
+  const list=document.getElementById('history-list');
+  if(list.querySelector('p')) list.innerHTML='';
+  const avg=((s.f+s.l+s.c+s.g)/4).toFixed(1);
+  const item=document.createElement('div'); item.className='hist-item';
+  item.innerHTML=`<div><div class="hist-q">Q${qNum}</div><div class="hist-scores">F${s.f} L${s.l} C${s.c} G${s.g}</div></div><div class="hist-avg">${avg}/5</div>`;
+  list.appendChild(item);
+}
+
+/* ── PARSE EVAL ── */
+function parseEval(text) {
+  const r={};
+  const m=text.match(/\[EVAL\]([\s\S]*?)\[\/EVAL\]/); if(!m) return r;
+  const b=m[1];
+  const lm=b.match(/Level:\s*(IM[123]|IH)/i); if(lm) r.level=lm[1];
+  const fm=b.match(/Fluency:\s*([0-9.]+)/i); if(fm) r.f=parseFloat(fm[1]);
+  const ln=b.match(/Length:\s*([0-9.]+)/i); if(ln) r.l=parseFloat(ln[1]);
+  const cm=b.match(/Coherence:\s*([0-9.]+)/i); if(cm) r.c=parseFloat(cm[1]);
+  const gm=b.match(/Grammar:\s*([0-9.]+)/i); if(gm) r.g=parseFloat(gm[1]);
+  const wm=b.match(/Weakness:\s*(.+?)(?:\n|$)/i); if(wm) r.weakness=wm[1].trim();
+  const cr=b.match(/Corrected:\s*([\s\S]+?)(?=\nTemplate:|\[\/EVAL\])/i); if(cr) r.corrected=cr[1].trim();
+  const tm=b.match(/Template:\s*([\s\S]+?)(?=\[\/EVAL\])/i); if(tm) r.template=tm[1].trim();
+  return r;
+}
+
+/* ── RENDER MESSAGE ── */
+function renderAssistantMessage(text) {
+  const msgs=document.getElementById('messages');
+  const parsed=parseEval(text);
+  const hasEval=parsed.f!==undefined;
+  const mainText=text.replace(/\[EVAL\][\s\S]*?\[\/EVAL\]/g,'').replace(/\[DIAGNOSTIC\][\s\S]*?\[\/DIAGNOSTIC\]/g,'').replace(/\[PROGRESS\][\s\S]*?\[\/PROGRESS\]/g,'').replace(/\*\*/g,'').trim();
+  const div=document.createElement('div'); div.className='msg assistant';
+  let inner=`<div class="avatar">AI</div><div>`;
+  inner+=`<div class="bubble">${mainText.replace(/\n/g,'<br>')}</div>`;
+  if(hasEval) {
+    updateScores(parsed.f,parsed.l,parsed.c,parsed.g);
+    if(parsed.level) updateLevel(parsed.level);
+    addToHistory(qCount,parsed);
+    const lvlUp=parsed.f>=3.5&&parsed.l>=4&&parsed.c>=3.5;
+    inner+=`<div class="eval-card"><div class="eval-row"><span>Level</span><strong>${parsed.level||'—'}</strong></div><div class="eval-row"><span>F / L / C / G</span><strong>${parsed.f||'—'} / ${parsed.l||'—'} / ${parsed.c||'—'} / ${parsed.g||'—'}</strong></div></div>`;
+    if(parsed.weakness) inner+=`<div class="tag-card weakness"><div class="tag-label">핵심 약점</div>${parsed.weakness}</div>`;
+    if(parsed.corrected) inner+=`<div class="tag-card correction"><div class="tag-label">Corrected</div>${parsed.corrected}</div>`;
+    if(parsed.template) inner+=`<div class="tag-card template-box">Template: ${parsed.template}</div>`;
+    if(lvlUp) inner+=`<div class="levelup">🎉 Level-up signal — ready for IH training!</div>`;
+  }
+  inner+=`</div>`;
+  div.innerHTML=inner;
+  msgs.appendChild(div);
+  msgs.scrollTop=msgs.scrollHeight;
+  speakText(mainText);
+}
+
+function showLoading() {
+  const msgs=document.getElementById('messages');
+  const el=document.createElement('div'); el.className='msg assistant'; el.id='loading-msg';
+  el.innerHTML=`<div class="avatar">AI</div><div class="loading-dots"><span></span><span></span><span></span></div>`;
+  msgs.appendChild(el); msgs.scrollTop=msgs.scrollHeight;
+}
+function removeLoading() { const el=document.getElementById('loading-msg'); if(el) el.remove(); }
+
+/* ── CLAUDE API ── */
+async function callClaude(userMsg) {
+  history.push({role:'user',content:userMsg});
+  try {
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:SYSTEM_PROMPT,messages:history})
+    });
+    const data=await resp.json();
+    const reply=data.content.map(b=>b.text||'').join('');
+    history.push({role:'assistant',content:reply});
+    return reply;
+  } catch(e) { return 'API 연결 오류. 다시 시도해주세요.'; }
+}
+
+/* ── START ── */
+async function startSession() {
+  document.getElementById('start-screen').remove();
+  document.getElementById('user-input').disabled=false;
+  document.getElementById('send-btn').disabled=false;
+  document.getElementById('mic-btn').disabled=false;
+  initSTT();
+  window.speechSynthesis && window.speechSynthesis.getVoices();
+  showLoading();
+  const reply=await callClaude('Start the OPIc diagnostic session. Ask me the first diagnostic question now.');
+  removeLoading(); renderAssistantMessage(reply);
+}
+
+/* ── SEND ── */
+async function sendMessage() {
+  if(isLoading) return;
+  const input=document.getElementById('user-input');
+  const text=input.value.trim(); if(!text) return;
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+  isLoading=true; document.getElementById('send-btn').disabled=true;
+  qCount++; 
+  const msgs=document.getElementById('messages');
+  const div=document.createElement('div'); div.className='msg user';
+  div.innerHTML=`<div class="avatar">나</div><div class="bubble">${text.replace(/\n/g,'<br>')}</div>`;
+  msgs.appendChild(div); msgs.scrollTop=msgs.scrollHeight;
+  input.value=''; autoResize(input);
+  showLoading();
+  const reply=await callClaude(text);
+  removeLoading(); renderAssistantMessage(reply);
+  isLoading=false; document.getElementById('send-btn').disabled=false;
+}
+
+/* ── UTILS ── */
+function autoResize(el) { el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
+function setStatus(msg,cls) { const el=document.getElementById('voice-status'); el.textContent=msg; el.className=cls; }
+window.speechSynthesis && window.speechSynthesis.addEventListener('voiceschanged',()=>{});
+
+/* iOS Safari: prevent address bar bounce affecting layout */
+document.addEventListener('touchmove', e => { if(e.target.closest('#messages,#panel-scores,#panel-history')) return; e.preventDefault(); }, {passive:false});
+</script>
+</body>
+</html>
